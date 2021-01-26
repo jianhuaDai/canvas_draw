@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]><html class="no-js lt-ie9 lt-ie8 lt-ie7"><![endif]-->
+<!--[if IE 7]><html class="no-js lt-ie9 lt-ie8"><![endif]-->
+<!--[if IE 8]><html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--><html class="no-js"><!--<![endif]-->
+ 
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!-- <link rel="stylesheet" href="./index.css" disabled> -->
+    <title>刮奖</title>
+    <meta name="description" content="刮奖">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body{margin: 0;padding:0;}
+        .canvas-box {position:relative;width:200px;height:200px;}
+        #canvas{position:absolute;left:0;z-index:99;}
+        .word {position:absolute;left:0;width: 200px; height: 100px;line-height:100px;text-align:center;font-size:24px;font-weight: 800;}
+    </style>
+</head>
+<body>
+  <div class="canvas-box">
+    <canvas id="canvas" width="200" height="100"></canvas>
+    <div class="word">一等奖</div>
+  </div>
+</body>
+<script>
+  const reusult = ['一等奖', '二等奖', '三等奖', '四等奖', '谢谢惠顾'];
+  let startFill = false; // 鼠标按钮开始涂抹效果标识
+  let canvasDom = document.querySelector('#canvas');  // canvas元素
+  let canvasDomX = canvasDom.getContext("2d");  // 画板
+  let touchRadius = 15;    // 默认手指触摸半径，可以自定义设置
+  // 绘制遮挡层
+  let setCanvas = () => {
+    var c=document.getElementById("canvas");
+    var ctx=c.getContext("2d");
+    ctx.fillStyle="#ccc";
+    ctx.fillRect(0,0,200,100);
+  };
+  let setResult = (elem) => {
+     let randomNum = Math.floor(Math.random() * 5);
+     document.querySelector(elem).innerHTML =  reusult[randomNum];
+  };
+ 
+  // 得到涂抹的百分比
+  let getTransparentPercent = function (ctx, width, height) {
+      var imgData = ctx.getImageData(0, 0, width, height),    // 得到canvas的像素信息
+          pixles = imgData.data,
+          transPixs = [];
+      for (var i = 0, j = pixles.length; i < j; i += 4) {    // 因为存储的结构为[R, G, B, A]，所以要每次跳4个长度
+          var a = pixles[i + 3];    // 拿到存储alpha通道的值
+          if (a === 0) {    // alpha通道为0，就代表透明
+              transPixs.push(i);
+          }
+      }
+      // 全部的带透明度和不带透明度计算比例
+      return (transPixs.length / (pixles.length / 4) * 100).toFixed(2);
+  }
+  // 绘制涂擦效果圆形
+  // @param { integer } 圆心的x坐标
+  // @param { integer } 圆心的y坐标
+  // @param { integer } 圆心半径
+  // @param { string } 填充的颜色（本例中会通过其余代码设置为‘透明’，所以这个设置可以忽略）
+  let fillCircle = function (x, y, radius, fillColor) {
+    this.fillStyle = fillColor || "#eee";
+    this.beginPath();
+    this.moveTo(x, y);
+    this.arc(x, y, radius, 0, Math.PI * 2, false);    // 标准画圆
+    this.fill();
+  };
+ 
+  let int = () => {
+    setResult('.word'); // 随机设置中奖的结果
+    setCanvas();  // 绘制画布遮挡住底部中奖结果
+    // 鼠标按下监听
+    canvasDom.addEventListener('mousedown', function(e) {
+      startFill = true;
+      let x = e.clientX;
+      let y = e.clientY;
+      canvasDomX.globalCompositeOperation = 'destination-out'; // 设置绘制时透明效果可以看到底部中奖结果
+      fillCircle.call(canvasDomX, x, y, touchRadius, '#ccc');
+    }, false);
+    // 鼠标移动监听
+    canvasDom.addEventListener('mousemove', function(e) {
+      if (startFill) {
+        let x = e.clientX;
+        let y = e.clientY;
+        canvasDomX.globalCompositeOperation = 'destination-out';
+        fillCircle.call(canvasDomX, x, y, touchRadius, '#ccc');
+        let percent = getTransparentPercent(canvasDomX, 200, 100);
+        console.log("当前涂抹比例为： " + percent + " %");
+        // 涂抹超过50%提示中奖信息
+        if (percent > 50) {
+          alert('您的中奖信息为：' + document.querySelector('.word').innerHTML);
+          startFill = false;
+          document.location.reload();
+        }
+      }
+    }, false);
+    // 鼠标弹起监听
+    canvasDom.addEventListener('mouseup', function(e) {
+      startFill = false;
+    }, false);
+  };
+  
+  // 页面初始化
+  int();
+</script>
+</html>
